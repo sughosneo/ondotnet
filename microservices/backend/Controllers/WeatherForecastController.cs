@@ -42,30 +42,46 @@ namespace backend.Controllers
         [HttpGet]
         public async Task<string> Get([FromServices] IDistributedCache cache)
         {
-            if(new Random().Next(50) < 20)
-                throw new Exception("System down");
+            _logger.LogInformation("{Method} - was called ", "backend.Controllers.WeatherForecastController.Get");
 
-            var weather = await cache.GetStringAsync("weather");
-
-            if (weather == null)
+            if (new Random().Next(50) < 20)
             {
-                var rng = new Random();
-                var forecasts = Enumerable.Range(1, 5).Select(index => new WeatherForecast
-                {
-                    Date = DateTime.Now.AddDays(index),
-                    TemperatureC = rng.Next(-20, 55),
-                    Summary = Summaries[rng.Next(Summaries.Length)]
-                })
-                .ToArray();
-
-                weather = JsonSerializer.Serialize(forecasts);
-
-                await cache.SetStringAsync("weather", weather, new DistributedCacheEntryOptions
-                {
-                    AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(5)
-                });
+                _logger.LogError("System is down!");
+                throw new Exception("System is down");
             }
-            return weather;
+
+            try
+            {
+                var weather = await cache.GetStringAsync("weather");
+
+                if (weather == null)
+                {
+                    var rng = new Random();
+                    var forecasts = Enumerable.Range(1, 5).Select(index => new WeatherForecast
+                    {
+                        Date = DateTime.Now.AddDays(index),
+                        TemperatureC = rng.Next(-20, 55),
+                        Summary = Summaries[rng.Next(Summaries.Length)]
+                    })
+                    .ToArray();
+
+                    weather = JsonSerializer.Serialize(forecasts);
+
+                    await cache.SetStringAsync("weather", weather, new DistributedCacheEntryOptions
+                    {
+                        AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(5)
+                    });
+                }
+
+                _logger.LogInformation("Weather data fetched !");
+
+                return weather;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Unable to fetch result!", ex);
+                throw;
+            }
         }
     }
 }
