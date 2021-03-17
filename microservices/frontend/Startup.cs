@@ -11,6 +11,9 @@ using Microsoft.Extensions.Hosting;
 using Polly;
 using Polly.Extensions.Http;
 using System.Net.Http;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using HealthChecks.UI.Client;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace frontend
 {
@@ -29,17 +32,19 @@ namespace frontend
             services.AddRazorPages();
             services.AddHttpClient<WeatherClient>(client =>
             {
-                 var baseAddress = Configuration.GetServiceUri("backend");
-                 // if not running with tye, set to default
-                 if(baseAddress==null)
-                    baseAddress = new Uri("https://localhost:5901");
-                
+                var baseAddress = Configuration.GetServiceUri("backend");
+                // if not running with tye, set to default
+                if (baseAddress == null)
+                    baseAddress = new Uri("https://localhost:5000");
+
                 client.BaseAddress = baseAddress;
             });
             // // uncomment the code below for handling partial failures in code
             //  .AddPolicyHandler(GetRetryPolicy())
             //  .AddPolicyHandler(GetCircuitBreakerPolicy());
             // 
+
+            services.AddHealthChecks(Configuration);
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -66,6 +71,16 @@ namespace frontend
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapRazorPages();
+
+                endpoints.MapHealthChecks("/hc", new HealthCheckOptions()
+                {
+                    Predicate = _ => true,
+                    ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+                });
+                endpoints.MapHealthChecks("/liveness", new HealthCheckOptions
+                {
+                    Predicate = r => r.Name.Contains("self")
+                });
             });
         }
 
@@ -82,6 +97,18 @@ namespace frontend
 
         public static IAsyncPolicy<HttpResponseMessage> GetCircuitBreakerPolicy() =>
             HttpPolicyExtensions.HandleTransientHttpError()
-                .CircuitBreakerAsync(15, TimeSpan.FromSeconds(15));
+                .CircuitBreakerAsync(15, TimeSpan.FromSeconds(15));        
+    }
+
+    static class ServiceCollectionExtensions
+    {
+        public static IServiceCollection AddHealthChecks(this IServiceCollection services, IConfiguration configuration)
+        {
+            services.AddHealthChecks()
+                .AddCheck("self", () => HealthCheckResult.Healthy())
+                .AddUrlGroup(new Uri(configuration["BackendAPIUrlHC"]), name: "backendapi-check", tags: new string[] { "backendapi" });
+
+            return services;
+        }
     }
 }
