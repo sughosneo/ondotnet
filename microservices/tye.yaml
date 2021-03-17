@@ -12,8 +12,52 @@ extensions:
 services:
 - name: backend
   project: backend/backend.csproj
+  env:
+  - name: ASPNETCORE_ENVIRONMENT
+    value: Development
+  - name: RedisConnectionString
+    value: localhost:6379
+  bindings:  
+  - protocol: https
+    name: https-port-backend-binding
+    port: 5000
+  - protocol: http
+    name: http-port-backend-binding
+    port: 9000
 - name: frontend
   project: frontend/frontend.csproj
+  env:
+  - name: ASPNETCORE_ENVIRONMENT
+    value: Development
+  - name: BackendAPIUrlHC
+    value: https://localhost:5000/hc
+  bindings:
+  - protocol: https
+    name: https-port-frontend-binding
+    port: 5001
+  - protocol: http
+    name: http-port-frontend-binding
+    port: 9001
+- name: webstatus
+  project: webstatus/webstatus.csproj
+  env:
+  - name: ASPNETCORE_ENVIRONMENT
+    value: Development
+  - name: HealthChecksUI__HealthChecks__0__Name
+    value: Frontend Service Health Check
+  - name: HealthChecksUI__HealthChecks__0__Uri
+    value: https://localhost:5001/hc
+  - name: HealthChecksUI__HealthChecks__1__Name
+    value: Backend Service Health Check
+  - name: HealthChecksUI__HealthChecks__1__Uri
+    value: https://localhost:5000/hc
+  bindings:
+  - protocol: https
+    name: https-port-webstatus-binding
+    port: 5007
+  - protocol: http
+    name: http-port-webstatus-binding
+    port: 9007
 - name: redis
   image: redis
   bindings:
