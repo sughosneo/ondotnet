@@ -30,11 +30,11 @@ namespace frontend
             {
                 var responseMessage = await this.client.GetAsync("/weatherforecast");
 
-                _logger.LogInformation("Was able to fetch data - {data}", responseMessage.Content.ToString());
+                _logger.LogInformation("Was able to fetch data from backend!");
 
                 if (responseMessage != null)
                 {
-                    var stream = await responseMessage.Content.ReadAsStreamAsync();
+                    var stream = await responseMessage.Content.ReadAsStreamAsync();                                        
                     return await JsonSerializer.DeserializeAsync<WeatherForecast[]>(stream, options);
                 }
             }

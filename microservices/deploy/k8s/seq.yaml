@@ -1,0 +1,44 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: seq
+  labels:
+    app.kubernetes.io/name: seq
+    app.kubernetes.io/part-of: microservice
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: seq
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: seq
+        app.kubernetes.io/part-of: microservice
+    spec:
+      containers:
+        - name: seq
+          image: datalust/seq:latest
+          resources:
+            requests:
+              cpu: 100m
+              memory: 100Mi
+          ports:
+            - containerPort: 5340          
+          env:
+          - name: ACCEPT_EULA
+            value: "Y"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: seq
+  labels:
+    app.kubernetes.io/name: seq
+    app.kubernetes.io/part-of: microservice
+spec:
+  ports:
+    - port: 5340
+      targetPort: 5340
+  selector:
+    app.kubernetes.io/name: seq

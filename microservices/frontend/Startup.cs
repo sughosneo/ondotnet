@@ -35,7 +35,7 @@ namespace frontend
                 var baseAddress = Configuration.GetServiceUri("backend");
                 // if not running with tye, set to default
                 if (baseAddress == null)
-                    baseAddress = new Uri("https://localhost:5000");
+                    baseAddress = new Uri("http://localhost:9000");
 
                 client.BaseAddress = baseAddress;
             });
@@ -59,6 +59,12 @@ namespace frontend
                 app.UseExceptionHandler("/Error");
                 // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
                 app.UseHsts();
+            }
+
+            var pathBase = Configuration["PATH_BASE"];
+            if (!string.IsNullOrEmpty(pathBase))
+            {
+                app.UsePathBase(pathBase);
             }
 
             app.UseHttpsRedirection();

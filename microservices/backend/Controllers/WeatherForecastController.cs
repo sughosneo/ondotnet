@@ -44,11 +44,12 @@ namespace backend.Controllers
         {
             _logger.LogInformation("{Method} - was called ", "backend.Controllers.WeatherForecastController.Get");
 
+            /*
             if (new Random().Next(50) < 20)
             {
                 _logger.LogError("System is down!");
                 throw new Exception("System is down");
-            }
+            }*/
 
             try
             {
@@ -66,6 +67,8 @@ namespace backend.Controllers
                     .ToArray();
 
                     weather = JsonSerializer.Serialize(forecasts);
+
+                    _logger.LogInformation("Weather data - {data}", weather);
 
                     await cache.SetStringAsync("weather", weather, new DistributedCacheEntryOptions
                     {
