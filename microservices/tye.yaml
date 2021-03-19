@@ -11,6 +11,18 @@ services:
     value: Development
   - name: RedisConnectionString
     value: localhost:6379
+  - name: UseFeatureManagement
+    value: True
+  - name: FeatureManagement__StaticWeatherAPI
+    value: False
+  - name: FeatureManagement__ExternalWeatherAPI
+    value: True
+  - name: UseExporter
+    value: "zipkin"
+  - name: Zipkin__ServiceName
+    value: "backend"
+  - name: Zipkin__Endpoint
+    value: "http://localhost:9411/api/v2/spans"  
   bindings:  
   - protocol: https
     name: https-port-backend-binding
@@ -25,6 +37,12 @@ services:
     value: Development
   - name: BackendAPIUrlHC
     value: http://localhost:9000/hc
+  - name: UseExporter
+    value: "zipkin"
+  - name: Zipkin__ServiceName
+    value: "frontend"
+  - name: Zipkin__Endpoint
+    value: "http://localhost:9411/api/v2/spans"
   bindings:
   - protocol: https
     name: https-port-frontend-binding

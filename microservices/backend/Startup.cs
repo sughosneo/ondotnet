@@ -13,6 +13,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.OpenApi.Models;
+using OpenTelemetry;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
+using Microsoft.FeatureManagement;
 
 namespace backend
 {
@@ -32,15 +37,21 @@ namespace backend
             services.AddSwaggerGen();
             services.AddStackExchangeRedisCache(o =>
             {
-               var con = Configuration.GetConnectionString("redis");
-               //default fallback
-               if(con==null)
-                con = "localhost:6379";
+                var con = Configuration.GetConnectionString("redis");
+                //default fallback
+                if (con == null)
+                    con = "localhost:6379";
 
                 o.Configuration = con;
             });
 
+            if (Configuration.UseFeatureManagement())
+            {
+                services.AddFeatureManagement();
+            }
+
             services.AddHealthChecks(Configuration);
+            services.AddOpenTelemetryTracing(Configuration);
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -78,6 +89,33 @@ namespace backend
 
     static class ServiceCollectionExtensions
     {
+
+        public static IServiceCollection AddOpenTelemetryTracing(this IServiceCollection services, IConfiguration configuration)
+        {
+            var exporter = configuration.GetValue<string>("UseExporter").ToLowerInvariant();
+
+            if (!String.IsNullOrEmpty(exporter) && exporter == "zipkin")
+            {
+                services.AddOpenTelemetryTracing((builder) => builder
+                        .AddAspNetCoreInstrumentation()
+                        .AddHttpClientInstrumentation()
+                        .AddZipkinExporter(zipkinOptions =>
+                        {
+                            zipkinOptions.Endpoint = new Uri(configuration.GetValue<string>("Zipkin:Endpoint"));
+                        }));
+            }
+            else
+            {
+                services.AddOpenTelemetryTracing((builder) => builder
+                        .AddAspNetCoreInstrumentation()
+                        .AddHttpClientInstrumentation()
+                        .AddConsoleExporter());
+            }
+
+
+            return services;
+        }
+
         public static IServiceCollection AddHealthChecks(this IServiceCollection services, IConfiguration configuration)
         {
             services.AddHealthChecks()
@@ -86,5 +124,11 @@ namespace backend
 
             return services;
         }
+    }
+
+    static class IConfigurationExtensions
+    {
+        public static bool UseFeatureManagement(this IConfiguration configuration) =>
+            configuration["UseFeatureManagement"] == bool.TrueString;
     }
 }

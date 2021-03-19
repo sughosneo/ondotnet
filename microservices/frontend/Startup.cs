@@ -14,6 +14,7 @@ using System.Net.Http;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using HealthChecks.UI.Client;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using OpenTelemetry.Trace;
 
 namespace frontend
 {
@@ -42,9 +43,11 @@ namespace frontend
             // // uncomment the code below for handling partial failures in code
             //  .AddPolicyHandler(GetRetryPolicy())
             //  .AddPolicyHandler(GetCircuitBreakerPolicy());
-            // 
+            //             
 
             services.AddHealthChecks(Configuration);
+            services.AddOpenTelemetryTracing(Configuration);
+
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -103,11 +106,38 @@ namespace frontend
 
         public static IAsyncPolicy<HttpResponseMessage> GetCircuitBreakerPolicy() =>
             HttpPolicyExtensions.HandleTransientHttpError()
-                .CircuitBreakerAsync(15, TimeSpan.FromSeconds(15));        
+                .CircuitBreakerAsync(15, TimeSpan.FromSeconds(15));
     }
 
     static class ServiceCollectionExtensions
     {
+
+        public static IServiceCollection AddOpenTelemetryTracing(this IServiceCollection services, IConfiguration configuration)
+        {
+            var exporter = configuration.GetValue<string>("UseExporter").ToLowerInvariant();
+
+            if (!String.IsNullOrEmpty(exporter) && exporter == "zipkin")
+            {
+                services.AddOpenTelemetryTracing((builder) => builder
+                        .AddAspNetCoreInstrumentation()
+                        .AddHttpClientInstrumentation()
+                        .AddZipkinExporter(zipkinOptions =>
+                        {
+                            zipkinOptions.Endpoint = new Uri(configuration.GetValue<string>("Zipkin:Endpoint"));
+                        }));
+            }
+            else
+            {
+                services.AddOpenTelemetryTracing((builder) => builder
+                        .AddAspNetCoreInstrumentation()
+                        .AddHttpClientInstrumentation()
+                        .AddConsoleExporter());
+            }
+
+
+            return services;
+        }
+
         public static IServiceCollection AddHealthChecks(this IServiceCollection services, IConfiguration configuration)
         {
             services.AddHealthChecks()
