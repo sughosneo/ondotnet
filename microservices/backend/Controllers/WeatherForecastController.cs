@@ -11,6 +11,7 @@ using System.Diagnostics;
 using OpenTelemetry.Context.Propagation;
 using OpenTelemetry;
 using Microsoft.FeatureManagement;
+using backend.Services;
 
 namespace backend.Controllers
 {
@@ -28,11 +29,13 @@ namespace backend.Controllers
         private ActivitySource _activitySource = new ActivitySource(nameof(WeatherForecastController));
         private static readonly TextMapPropagator Propagator = new TraceContextPropagator();
         private static readonly Func<IDictionary<string, string>, string, IEnumerable<string>> _getter;
+        private IAzureMapWeatherSvc _azureMapWeatherSvc;
 
-        public WeatherForecastController(ILogger<WeatherForecastController> logger, IFeatureManager featureManager)
+        public WeatherForecastController(ILogger<WeatherForecastController> logger, IFeatureManager featureManager, IAzureMapWeatherSvc azureMapWeatherSvc)
         {
             _logger = logger;
             _featureManager = featureManager;
+            _azureMapWeatherSvc = azureMapWeatherSvc;
         }
 
         [HttpGet]
@@ -55,10 +58,12 @@ namespace backend.Controllers
 
                     if (await _featureManager.IsEnabledAsync("ExternalWeatherAPI"))
                     {
+                        _logger.LogInformation("Calling external api");
                         weather = await GetWeatherExternalData();
                     }
                     else
                     {
+                        _logger.LogInformation("Fetching static data");
                         weather = await GetWeatherStaticData();
                     }
 
@@ -94,14 +99,7 @@ namespace backend.Controllers
 
         private async Task<string> GetWeatherExternalData()
         {
-            var rng = new Random();
-            var modifiedWeatherData = new[]
-            {
-                new WeatherForecast() { Date=DateTime.Now, TemperatureC=rng.Next(-20, 55), Summary="Sample-1" },
-                new WeatherForecast() { Date=DateTime.Now, TemperatureC=rng.Next(-20, 55), Summary="Sample-2" },
-                new WeatherForecast() { Date=DateTime.Now, TemperatureC=rng.Next(-20, 55), Summary="Sample-3" }
-            };
-
+            var modifiedWeatherData = await _azureMapWeatherSvc.GetAzureMapWeatherForcastDate();
             return JsonSerializer.Serialize(modifiedWeatherData);
         }
     }

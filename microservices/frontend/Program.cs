@@ -57,14 +57,20 @@ namespace frontend
 
         private static Serilog.ILogger CreateSerilogLogger(IConfiguration configuration)
         {
+            var seqBaseAddress = configuration.GetServiceUri("seq");
+            Console.WriteLine($"seqBaseAddress -- {seqBaseAddress}");            
+
             var seqServerUrl = configuration["Serilog:SeqServerUrl"];
+            
+            Console.WriteLine($"seqServerUrl -- {seqServerUrl}");
+
             var logstashUrl = configuration["Serilog:LogstashgUrl"];
             return new LoggerConfiguration()
                 .MinimumLevel.Verbose()
                 .Enrich.WithProperty("ApplicationContext", APP_NAME)
                 .Enrich.FromLogContext()
                 .WriteTo.Console()
-                .WriteTo.Seq(string.IsNullOrWhiteSpace(seqServerUrl) ? "http://seq" : seqServerUrl)
+                .WriteTo.Seq(string.IsNullOrWhiteSpace(seqServerUrl) ? ((seqBaseAddress == null) ? "http://seq" : seqBaseAddress.ToString()) : seqServerUrl)
                 .WriteTo.Http(string.IsNullOrWhiteSpace(logstashUrl) ? "http://logstash:8080" : logstashUrl)
                 .ReadFrom.Configuration(configuration)
                 .CreateLogger();

@@ -24,7 +24,8 @@ spec:
               cpu: 100m
               memory: 100Mi
           ports:
-            - containerPort: 5340          
+            - containerPort: 80            
+            - containerPort: 5341         
           env:
           - name: ACCEPT_EULA
             value: "Y"
@@ -38,7 +39,7 @@ metadata:
     app.kubernetes.io/part-of: microservice
 spec:
   ports:
-    - port: 5340
-      targetPort: 5340
+    - port: 80
+      targetPort: 80    
   selector:
     app.kubernetes.io/name: seq

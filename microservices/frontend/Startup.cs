@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using HealthChecks.UI.Client;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using OpenTelemetry.Trace;
+using OpenTelemetry.Resources;
 
 namespace frontend
 {
@@ -113,17 +114,21 @@ namespace frontend
     {
 
         public static IServiceCollection AddOpenTelemetryTracing(this IServiceCollection services, IConfiguration configuration)
-        {
+        {            
+            var zipkinEndpoint = configuration.GetServiceUri("zipkin");                  
+
             var exporter = configuration.GetValue<string>("UseExporter").ToLowerInvariant();
+            var zipkinServiceName = configuration.GetValue<string>("Zipkin:ServiceName");
 
             if (!String.IsNullOrEmpty(exporter) && exporter == "zipkin")
             {
                 services.AddOpenTelemetryTracing((builder) => builder
+                        .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(zipkinServiceName))
                         .AddAspNetCoreInstrumentation()
                         .AddHttpClientInstrumentation()
                         .AddZipkinExporter(zipkinOptions =>
-                        {
-                            zipkinOptions.Endpoint = new Uri(configuration.GetValue<string>("Zipkin:Endpoint"));
+                        {                            
+                            zipkinOptions.Endpoint = new Uri($"{zipkinEndpoint}api/v2/spans");
                         }));
             }
             else
@@ -140,9 +145,11 @@ namespace frontend
 
         public static IServiceCollection AddHealthChecks(this IServiceCollection services, IConfiguration configuration)
         {
+            var backendBaseAddress = configuration.GetServiceUri("backend");
+            
             services.AddHealthChecks()
                 .AddCheck("self", () => HealthCheckResult.Healthy())
-                .AddUrlGroup(new Uri(configuration["BackendAPIUrlHC"]), name: "backendapi-check", tags: new string[] { "backendapi" });
+                .AddUrlGroup(new Uri($"{backendBaseAddress}hc"), name: "backendapi-check", tags: new string[] { "backendapi" });
 
             return services;
         }

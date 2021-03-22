@@ -18,6 +18,7 @@ using OpenTelemetry;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Microsoft.FeatureManagement;
+using backend.Services;
 
 namespace backend
 {
@@ -52,6 +53,9 @@ namespace backend
 
             services.AddHealthChecks(Configuration);
             services.AddOpenTelemetryTracing(Configuration);
+
+            // External weather forecast API
+            services.AddHttpClient<IAzureMapWeatherSvc, AzureMapWeatherSvc>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -91,17 +95,21 @@ namespace backend
     {
 
         public static IServiceCollection AddOpenTelemetryTracing(this IServiceCollection services, IConfiguration configuration)
-        {
+        {            
+            var zipkinEndpoint = configuration.GetServiceUri("zipkin");            
+            
             var exporter = configuration.GetValue<string>("UseExporter").ToLowerInvariant();
+            var zipkinServiceName = configuration.GetValue<string>("Zipkin:ServiceName");
 
             if (!String.IsNullOrEmpty(exporter) && exporter == "zipkin")
             {
                 services.AddOpenTelemetryTracing((builder) => builder
+                        .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(zipkinServiceName))
                         .AddAspNetCoreInstrumentation()
                         .AddHttpClientInstrumentation()
                         .AddZipkinExporter(zipkinOptions =>
-                        {
-                            zipkinOptions.Endpoint = new Uri(configuration.GetValue<string>("Zipkin:Endpoint"));
+                        {                            
+                            zipkinOptions.Endpoint = new Uri($"{zipkinEndpoint}api/v2/spans");
                         }));
             }
             else
@@ -118,9 +126,11 @@ namespace backend
 
         public static IServiceCollection AddHealthChecks(this IServiceCollection services, IConfiguration configuration)
         {
+            var redisConnectionStr = configuration.GetConnectionString("redis");
+
             services.AddHealthChecks()
                 .AddCheck("self", () => HealthCheckResult.Healthy())
-                .AddRedis(configuration["RedisConnectionString"], name: "redis-check", tags: new string[] { "redis" });
+                .AddRedis(redisConnectionStr, name: "redis-check", tags: new string[] { "redis" });
 
             return services;
         }

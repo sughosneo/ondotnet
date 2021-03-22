@@ -55,7 +55,7 @@ namespace frontend
                     Propagator.Inject(new PropagationContext(contextToInject, Baggage.Current), carrier, Setter);
 
                     activity?.AddEvent(new ActivityEvent("GetAsync:Started"));
-
+                    
                     var responseMessage = await this.client.GetAsync("/weatherforecast");
 
                     _logger.LogInformation("Was able to fetch data from backend!");
@@ -64,7 +64,7 @@ namespace frontend
 
                     if (responseMessage != null)
                     {
-                        var stream = await responseMessage.Content.ReadAsStreamAsync();
+                        var stream = await responseMessage.Content.ReadAsStreamAsync();                        
                         return await JsonSerializer.DeserializeAsync<WeatherForecast[]>(stream, options);
                     }
 

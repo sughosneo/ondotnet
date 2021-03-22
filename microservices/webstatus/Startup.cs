@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Builder;
+﻿using HealthChecks.UI.Client;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
@@ -22,6 +23,8 @@ namespace WebStatus
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            
+
             RegisterAppInsights(services);
 
             services.AddControllers();
@@ -33,12 +36,19 @@ namespace WebStatus
             services
                 .AddHealthChecksUI(setupSettings: setup =>
                 {
+                    // It can only run with Tye -- service discovery
+                    var frontendBaseAddress = Configuration.GetServiceUri("frontend");
+                    var backendBaseAddress = Configuration.GetServiceUri("backend");
+
                     setup.SetEvaluationTimeInSeconds(5); //Configures the UI to poll for healthchecks updates every 5 seconds
+                    setup.AddHealthCheckEndpoint("frontend", $"{frontendBaseAddress}hc" );
+                    setup.AddHealthCheckEndpoint("backend", $"{backendBaseAddress}hc");
                 })
                 .AddInMemoryStorage();
 
             services.AddMvc()
                 .SetCompatibilityVersion(CompatibilityVersion.Version_3_0);
+           
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -77,6 +87,11 @@ namespace WebStatus
                 endpoints.MapHealthChecks("/liveness", new HealthCheckOptions
                 {
                     Predicate = r => r.Name.Contains("self")
+                });
+                endpoints.MapHealthChecks("/hc", new HealthCheckOptions
+                {
+                    Predicate = _ => true,
+                    ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
                 });
             });
         }
