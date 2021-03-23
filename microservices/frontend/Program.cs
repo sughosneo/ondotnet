@@ -70,7 +70,7 @@ namespace frontend
                 .Enrich.WithProperty("ApplicationContext", APP_NAME)
                 .Enrich.FromLogContext()
                 .WriteTo.Console()
-                .WriteTo.Seq(string.IsNullOrWhiteSpace(seqServerUrl) ? ((seqBaseAddress == null) ? "http://seq" : seqBaseAddress.ToString()) : seqServerUrl)
+                .WriteTo.Seq(string.IsNullOrWhiteSpace(seqServerUrl) ? "http://seq" : seqServerUrl)
                 .WriteTo.Http(string.IsNullOrWhiteSpace(logstashUrl) ? "http://logstash:8080" : logstashUrl)
                 .ReadFrom.Configuration(configuration)
                 .CreateLogger();
